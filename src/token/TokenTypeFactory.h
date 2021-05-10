@@ -16,4 +16,8 @@ namespace simpl {
 
         static std::unordered_map<std::string, TokenType> getTokenTypes();
     };
+
+    inline std::ostream &operator<<(std::ostream &o, TokenType type) {
+        return o << TokenTypeFactory::getTokenTypeName(type);
+    }
 }
