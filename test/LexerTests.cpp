@@ -65,6 +65,15 @@ TEST(lexer, lexer_read_string) {
     ASSERT_EQ(lexer.getToken().getValue(), "text");
 }
 
+TEST(lexer, lexer_read_string_with_white_chars) {
+    std::istringstream in("\"\ttext\n\"");
+    Lexer lexer(in);
+    lexer.readNextToken();
+
+    ASSERT_EQ(lexer.getToken().getType(), TokenType::String);
+    ASSERT_EQ(lexer.getToken().getValue(), "\ttext\n");
+}
+
 TEST(lexer, lexer_read_int) {
     std::istringstream in("321");
     Lexer lexer(in);
@@ -73,6 +82,7 @@ TEST(lexer, lexer_read_int) {
     ASSERT_EQ(lexer.getToken().getType(), TokenType::Int);
     ASSERT_EQ(lexer.getToken().getValue(), "321");
 }
+
 
 TEST(lexer, lexer_read_const_tokens) {
     std::unordered_map<std::string, TokenType> types = TokenTypeFactory::getTokenTypes();
@@ -94,3 +104,4 @@ TEST(lexer, lexer_read_const_tokens) {
     lexer.readNextToken();
     ASSERT_EQ(lexer.getToken().getType(), TokenType::Eof);
 }
+

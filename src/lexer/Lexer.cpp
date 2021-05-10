@@ -71,7 +71,7 @@ bool Lexer::tryString() {
     in.get();
 
     std::string buf;
-    while(std::isprint(in.peek()) && in.peek() != '"')
+    while((std::isprint(in.peek()) || std::isspace(in.peek())) && in.peek() != '"')
         buf += static_cast<char>(in.get());
 
     if (in.peek() != '"') {
