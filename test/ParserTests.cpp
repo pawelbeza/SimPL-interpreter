@@ -35,6 +35,7 @@ INSTANTIATE_TEST_CASE_P(FunctionParsing, ParserTest, ::testing::Values(
         ParserTestParams{"func foo(var);", true},
         ParserTestParams{"func foo(var, 1){}", true},
         ParserTestParams{"func foo(var){};", true},
+        ParserTestParams{"func foo2(var1, ){}", true},
         ParserTestParams{"func foo(var){}", false},
         ParserTestParams{"func foo2(var1, var2){}", false},
         ParserTestParams{"func foo1(var){}"
@@ -74,8 +75,19 @@ INSTANTIATE_TEST_CASE_P(VariableAssignment, ParserTest, ::testing::Values(
                          "}", true},
         ParserTestParams{"func foo() {"
                          "a := 1;"
+                         "a := 2"
+                         "}", true},
+        ParserTestParams{"func foo() {"
+                         "a := 1;"
                          "a = 2"
                          "}", true},
+        ParserTestParams{"func foo() {"
+                         "a := 1;"
+                         "a = 2 * b"
+                         "}", true},
+        ParserTestParams{"func f() {{var = 1;}}", true},
+        ParserTestParams{"func f() {var := 1; {var = 1;}}", false},
+        ParserTestParams{"func f(var) {{var = 1;}}", false},
         ParserTestParams{"func foo() {"
                          "a := 1;"
                          "a = 2;"
@@ -150,14 +162,14 @@ INSTANTIATE_TEST_CASE_P(MathExpression, ParserTest, ::testing::Values(
                          "}", false},
         ParserTestParams{"func foo1(var) { return 5 * var;}"
                          "func foo2() {"
-                         "var := 1;"
+                         "var1 := 1;"
                          "var2 := 2;"
                          "a := var1 + var2 * foo1(var1);"
                          "}", false},
         ParserTestParams{"func foo1() { return 5;}"
                          "func foo2() {"
                          "var := 1;"
-                         "a := (5 * var) % 2 - foo() * 6/3 + 22;"
+                         "a := (5 * var) % 2 - foo1() * 6/3 + 22;"
                          "}", false},
         ParserTestParams{"func foo() {"
                          "a := [0,1];"
@@ -200,6 +212,10 @@ INSTANTIATE_TEST_CASE_P(LogicExpression, ParserTest, ::testing::Values(
                          "if (y-- > 4) {}"
                          "}", true},
         ParserTestParams{"func foo() {"
+                         "y := 5;"
+                         "if (!!(y == 4)) {}"
+                         "}", true},
+        ParserTestParams{"func foo() {"
                          "if (1 + 1 == 2) {}"
                          "}", false},
         ParserTestParams{"func foo() {"
@@ -207,6 +223,14 @@ INSTANTIATE_TEST_CASE_P(LogicExpression, ParserTest, ::testing::Values(
                          "}", false},
         ParserTestParams{"func foo() {"
                          "if ((2 * 3) - 5 == 1) {}"
+                         "}", false},
+        ParserTestParams{"func foo() {"
+                         "y := 5;"
+                         "if (!(y == 4)) {}"
+                         "}", false},
+        ParserTestParams{"func foo() {"
+                         "y := 5;"
+                         "if (!(!(y == 4))) {}"
                          "}", false},
         ParserTestParams{"func foo() {"
                          "if ((2 * 3) - 5 / 2 != 10) {}"
@@ -278,10 +302,12 @@ INSTANTIATE_TEST_CASE_P(PrintTest, ParserTest, ::testing::Values(
         ParserTestParams{"func f() {print();}", true},
         ParserTestParams{"func f() {print(hello)}", true},
         ParserTestParams{"func f() {print(\"hello\")}", true},
+        ParserTestParams{"func f() {print(\"hello\", );}", true},
         ParserTestParams{"func f() {print(\"hello\");}", false},
         ParserTestParams{"func f() {print(\"hello\n\");}", false},
         ParserTestParams{"func f() {print(\"\thello\n\");}", false},
-        ParserTestParams{"func f() {print(\"\thello\n `world`\");}", false}
+        ParserTestParams{"func f() {print(\"\thello\n `world`\");}", false},
+        ParserTestParams{"func f() {var := 1; print(\"\thello\n `world`\", 1, 5/2 + 4%var);}", false}
 ));
 
 INSTANTIATE_TEST_CASE_P(WhileTest, ParserTest, ::testing::Values(
@@ -302,12 +328,17 @@ INSTANTIATE_TEST_CASE_P(ReturnTest, ParserTest, ::testing::Values(
 ));
 
 INSTANTIATE_TEST_CASE_P(FunctionCallTest, ParserTest, ::testing::Values(
+        ParserTestParams{"func main() {a := fNotExists(); return a;}", true},
         ParserTestParams{"func f1() {return 2;}"
                          "func main() {a := f1() return a;}", true},
+        ParserTestParams{"func f1(a) {return 2;}"
+                         "func main() {a := f1(a,); return a;}", true},
+        ParserTestParams{"func f1(a) {return 2;}"
+                         "func main() {a := f1(a, b); return a;}", true},
         ParserTestParams{"func f1() {return 2;}"
                          "func main() {a := f1(; return a;}", true},
         ParserTestParams{"func f() {return 2;}"
-                         "func main() {a := f1(); return a;}", false},
+                         "func main() {a := f(); return a;}", false},
         ParserTestParams{"func f(a) {return 2 * a;}"
                          "func main() {a := f(2); return a;}", false}
 ));
@@ -315,6 +346,9 @@ INSTANTIATE_TEST_CASE_P(FunctionCallTest, ParserTest, ::testing::Values(
 INSTANTIATE_TEST_CASE_P(BlockTest, ParserTest, ::testing::Values(
         ParserTestParams{"func f() {} {}", true},
         ParserTestParams{"func f() { {}", true},
+        ParserTestParams{"func f() {{}}", false},
+        ParserTestParams{"func f() {{} {}}", false},
+        ParserTestParams{"func f() {{{{}} {}}}", false},
         ParserTestParams{"func slow_pow(base, exp) {"
                          "result := 1;"
                          "while (exp > 0) {"
@@ -328,6 +362,6 @@ INSTANTIATE_TEST_CASE_P(BlockTest, ParserTest, ::testing::Values(
                          "        return 1;"
                          "    }"
                          "print(\":)\n\");"
-                         "    return factorial(n - 1) * n;\n"
+                         "    return ugly_factorial(n - 1) * n;\n"
                          "}", false}
 ));
