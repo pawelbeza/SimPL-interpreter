@@ -1,12 +1,24 @@
 #include "Parser.hpp"
 
-#include "Function.hpp"
-#include "Block.hpp"
+#include <Function.hpp>
+#include <FunctionCallStatement.hpp>
+#include <IfStatement.hpp>
+#include <Block.hpp>
+#include <Program.hpp>
+#include <VariableAssignment.hpp>
+#include <WhileStatement.hpp>
+#include <ReturnStatement.hpp>
+#include <PrintStatement.hpp>
 
 #include <sstream>
 #include <list>
 #include <memory>
 #include <vector>
+#include <LogicExpression.hpp>
+#include <RelationalExpression.hpp>
+#include <LogicFactorExpression.hpp>
+#include <MathExpression.hpp>
+#include <MathFactorExpression.hpp>
 
 using namespace simpl;
 
@@ -18,6 +30,8 @@ void Parser::parse() {
 }
 
 void Parser::parseProgram() {
+    program = std::make_shared<Program>();
+
     while (verifyTokenType(TokenType::Function))
         parseFunc();
 
@@ -25,7 +39,7 @@ void Parser::parseProgram() {
         throwBadToken({TokenType::Eof});
 }
 
-std::shared_ptr<Function> Parser::parseFunc() {
+void Parser::parseFunc() {
     acceptToken(TokenType::Function);
 
     std::string funcID = acceptToken(TokenType::Id).getValue();
@@ -34,237 +48,375 @@ std::shared_ptr<Function> Parser::parseFunc() {
     auto params = parseParameters();
     acceptToken(TokenType::RoundBracketClose);
 
-    parseBlock();
+    auto func = std::make_shared<Function>(funcID, params);
+    program->addFunction(func);
 
-    return std::make_shared<Function>(funcID, params);
+    parseBlock(func->getBlock());
 }
 
 std::vector<std::string> Parser::parseParameters() {
     std::vector<std::string> paramIDs;
-    while (verifyTokenType(TokenType::Id)) {
+
+    if (!verifyTokenType(TokenType::RoundBracketClose)) {
         std::string paramID = acceptToken(TokenType::Id).getValue();
         paramIDs.push_back(paramID);
+    }
 
-        if (!verifyTokenType(TokenType::RoundBracketClose))
-            acceptToken(TokenType::Comma);
+    while (verifyTokenType(TokenType::Comma)) {
+        advance();
+
+        std::string paramID = acceptToken(TokenType::Id).getValue();
+        paramIDs.push_back(paramID);
     }
 
     return paramIDs;
 }
 
-std::shared_ptr<Block> Parser::parseBlock() {
+void Parser::parseBlock(const std::shared_ptr<Block>& parentBlock) {
     acceptToken(TokenType::CurlyBracketOpen);
 
     while (true) {
+        std::shared_ptr<Statement> statement;
         if (verifyTokenType(TokenType::Id)) {
-            parseIdPrefix();
+            statement = parseIdPrefix(parentBlock);
         } else if (verifyTokenType(TokenType::While)) {
-            parseWhile();
+            statement = parseWhile(parentBlock);
         } else if (verifyTokenType(TokenType::If)) {
-            parseIf();
+            statement = parseIf(parentBlock);
         } else if (verifyTokenType(TokenType::Return)) {
-            parseReturn();
+            statement = parseReturn(parentBlock);
         } else if (verifyTokenType(TokenType::Print)) {
-            parsePrint();
+            statement = parsePrint(parentBlock);
         } else if (verifyTokenType(TokenType::CurlyBracketClose)) {
             advance();
             break;
         } else if (verifyTokenType(TokenType::CurlyBracketOpen)) {
-            parseBlock();
+            auto childBlock = std::make_shared<Block>(parentBlock);
+            parseBlock(childBlock);
         } else {
             throwBadToken({TokenType::Id, TokenType::While, TokenType::If, TokenType::Return, TokenType::Print,
                            TokenType::CurlyBracketClose});
         }
-    }
 
-    return std::make_shared<Block>();
+        parentBlock->addStatement(statement);
+    }
 }
 
-void Parser::parseIdPrefix() {
-    acceptToken(TokenType::Id);
+std::shared_ptr<Statement> Parser::parseIdPrefix(const std::shared_ptr<Block>& parentBlock) {
+    Token token = acceptToken(TokenType::Id);
 
+    std::shared_ptr<Statement> statement;
     if (verifyTokenType(TokenType::RoundBracketOpen))
-        parseFuncCallSuffix();
+        statement = parseFuncCallSuffix(parentBlock, token);
     else if (verifyTokenType(TokenType::Definition))
-        parseVariableDefinitionSuffix();
+        statement = parseVariableDefinitionSuffix(parentBlock, token);
     else if (verifyTokenType(TokenType::Assignment))
-        parseVariableAssignmentSuffix();
+        statement = parseVariableAssignmentSuffix(parentBlock, token);
     else
         throwBadToken({TokenType::CurlyBracketOpen, TokenType::Definition, TokenType::Assignment});
 
     acceptToken(TokenType::Semicolon);
+
+    return statement;
 }
 
-void Parser::parseFuncCallSuffix() {
+std::shared_ptr<Statement> Parser::parseFuncCallSuffix(const std::shared_ptr<Block>& parentBlock, const Token& token) {
+    std::string funcName = token.getValue();
+    if(!program->functionExists(funcName))
+        throwFunctionNotExist(funcName);
+
+    std::shared_ptr<Function> func = program->getFunction(funcName);
+
     acceptToken(TokenType::RoundBracketOpen);
-    parseFuncArgs();
+
+    auto args = parseFuncArgs(parentBlock);
+    if (paramsValid(func, args))
+        throwFunctionInvalidParametersNumber(func, args.size());
+
     acceptToken(TokenType::RoundBracketClose);
+
+    return std::make_shared<FunctionCallStatement>(func, args);
 }
 
-void Parser::parseVariableDefinitionSuffix() {
+std::shared_ptr<Statement> Parser::parseVariableDefinitionSuffix(const std::shared_ptr<Block>& parentBlock, const Token& token) {
+    std::string varName = token.getValue();
+    if (parentBlock->existsVariable(varName))
+        throwVariableAlreadyExists(varName);
+
+    parentBlock->addVariable(varName);
+
     acceptToken(TokenType::Definition);
-    parseLogicExpr();
+    auto expr = parseLogicExpr(parentBlock);
+
+    return std::make_shared<VariableAssignment>(varName, expr);
 }
 
-void Parser::parseVariableAssignmentSuffix() {
+std::shared_ptr<Statement> Parser::parseVariableAssignmentSuffix(const std::shared_ptr<Block>& parentBlock, const Token& token) {
+    std::string varName = token.getValue();
+    if (!parentBlock->existsVariable(varName))
+        throwVariableNotExists(varName);
+
     acceptToken(TokenType::Assignment);
-    parseLogicExpr();
+    auto expr = parseLogicExpr(parentBlock);
+
+    return std::make_shared<VariableAssignment>(varName, expr);
 }
 
-void Parser::parseWhile() {
+std::shared_ptr<Statement> Parser::parseWhile(const std::shared_ptr<Block>& parentBlock) {
     acceptToken(TokenType::While);
     acceptToken(TokenType::RoundBracketOpen);
-    parseLogicExpr();
+    auto expr = parseLogicExpr(parentBlock);
     acceptToken(TokenType::RoundBracketClose);
-    parseBlock();
+
+    auto childBlock = std::make_shared<Block>(parentBlock);
+    parseBlock(childBlock);
+
+    return std::make_shared<WhileStatement>(expr, childBlock);
 }
 
-void Parser::parseIf() {
+std::shared_ptr<Statement> Parser::parseIf(const std::shared_ptr<Block>& parentBlock) {
     acceptToken(TokenType::If);
+
     acceptToken(TokenType::RoundBracketOpen);
-    parseLogicExpr();
+    auto expr = parseLogicExpr(parentBlock);
     acceptToken(TokenType::RoundBracketClose);
-    parseBlock();
+
+    auto blockIf = std::make_shared<Block>(parentBlock);
+    parseBlock(blockIf);
 
     if (!verifyTokenType(TokenType::Else))
-        return;
+        return std::make_shared<IfStatement>(expr, blockIf);
 
     advance();
-    parseBlock();
+
+    auto blockElse = std::make_shared<Block>(parentBlock);
+    parseBlock(blockElse);
+
+    return std::make_shared<IfStatement>(expr, blockIf, blockElse);
 }
 
-void Parser::parseReturn() {
+std::shared_ptr<Statement> Parser::parseReturn(const std::shared_ptr<Block>& parentBlock) {
     acceptToken(TokenType::Return);
-    parseLogicExpr();
-
+    auto expr = parseLogicExpr(parentBlock);
     acceptToken(TokenType::Semicolon);
+
+    return std::make_shared<ReturnStatement>(expr);
 }
 
-void Parser::parsePrint() {
+std::shared_ptr<Statement> Parser::parsePrint(const std::shared_ptr<Block>& parentBlock) {
     acceptToken(TokenType::Print);
     acceptToken(TokenType::RoundBracketOpen);
 
+    auto printStatement = std::make_shared<PrintStatement>();
     if (verifyTokenType(TokenType::String)) {
-        advance();
+        std::string arg = acceptToken(TokenType::String).getValue();
+        printStatement->addPrintArg(arg);
     } else if (verifyTokenType(TokenType::RoundBracketClose)) {
         advance();
     } else {
-        parseLogicExpr();
+        auto expr = parseLogicExpr(parentBlock);
+        printStatement->addPrintArg(expr);
     }
 
     while (verifyTokenType(TokenType::Comma)) {
-        acceptToken(TokenType::Comma);
+        advance();
 
         if (verifyTokenType(TokenType::String)) {
-            advance();
+            std::string arg = acceptToken(TokenType::String).getValue();
+            printStatement->addPrintArg(arg);
         } else if (verifyTokenType(TokenType::RoundBracketClose)) {
             advance();
             break;
         } else {
-            parseLogicExpr();
+            auto expr = parseLogicExpr(parentBlock);
+            printStatement->addPrintArg(expr);
         }
     }
 
     acceptToken(TokenType::RoundBracketClose);
     acceptToken(TokenType::Semicolon);
+
+    return printStatement;
 }
 
-void Parser::parseFuncArgs() {
-    while (!verifyTokenType(TokenType::RoundBracketClose)) {
-        parseLogicExpr();
+std::vector<std::shared_ptr<Expression>> Parser::parseFuncArgs(const std::shared_ptr<Block>& parentBlock) {
+    std::vector<std::shared_ptr<Expression>> args;
 
-        if (!verifyTokenType(TokenType::RoundBracketClose))
-            acceptToken(TokenType::Comma);
+    if (!verifyTokenType(TokenType::RoundBracketClose)) {
+        auto arg = parseLogicExpr(parentBlock);
+        args.push_back(arg);
     }
+
+    while (verifyTokenType(TokenType::Comma)) {
+        advance();
+
+        auto arg = parseLogicExpr(parentBlock);
+        args.push_back(arg);
+    }
+
+    return args;
 }
 
-void Parser::parseLogicExpr() {
-    parseLogicAndTerm();
+std::shared_ptr<Expression> Parser::parseLogicExpr(const std::shared_ptr<Block>& parentBlock) {
+    std::vector<std::shared_ptr<Expression>> andExpressions;
+
+    std::shared_ptr<AndExpression> expression;
+    andExpressions.push_back(expression);
+
+    auto term = parseLogicAndTerm(parentBlock);
+    andExpressions.push_back(term);
+
     while (verifyTokenType(TokenType::Or)) {
-        acceptToken(TokenType::Or);
-        parseLogicAndTerm();
+        advance();
+
+        term = parseLogicAndTerm(parentBlock);
+        andExpressions.push_back(term);
     }
+
+    return std::make_shared<LogicExpression>(andExpressions);
 }
 
-void Parser::parseLogicAndTerm() {
-    parseLogicRelTerm();
+std::shared_ptr<AndExpression> Parser::parseLogicAndTerm(const std::shared_ptr<Block>& parentBlock) {
+    std::vector<std::shared_ptr<Expression>> relExpressions;
+
+    auto term = parseLogicRelTerm(parentBlock);
+    relExpressions.push_back(term);
+
     while (verifyTokenType(TokenType::And)) {
-        acceptToken(TokenType::And);
-        parseLogicRelTerm();
+        advance();
+
+        term = parseLogicRelTerm(parentBlock);
+        relExpressions.push_back(term);
     }
+
+    return std::make_shared<AndExpression>(relExpressions);
 }
 
-void Parser::parseLogicRelTerm() {
-    parseLogicFactor();
+std::shared_ptr<RelationalExpression> Parser::parseLogicRelTerm(const std::shared_ptr<Block>& parentBlock) {
+    std::vector<std::shared_ptr<Expression>> factorExpressions;
+
+    auto factor = parseLogicFactor(parentBlock);
+    factorExpressions.push_back(factor);
+
     while (isTokenTypeRelational()) {
         advance();
-        parseLogicFactor();
+
+        factor = parseLogicFactor(parentBlock);
+        factorExpressions.push_back(factor);
     }
+
+    return std::make_shared<RelationalExpression>(factorExpressions);
 }
 
-void Parser::parseLogicFactor() {
+std::shared_ptr<Expression> Parser::parseLogicFactor(const std::shared_ptr<Block>& parentBlock) {
     if (verifyTokenType(TokenType::Negation)) {
-        acceptToken(TokenType::Negation);
-        parseLogicFactor();
+        advance();
+
+        auto factor = parseMathExp(parentBlock);
+        return std::make_shared<LogicFactorExpression>(factor, true);
     } else {
-        parseMathExp();
+        auto factor = parseMathExp(parentBlock);
+        return std::make_shared<LogicFactorExpression>(factor, false);
     }
 }
 
-void Parser::parseMathExp() {
-    parseMathTerm();
+std::shared_ptr<Expression> Parser::parseMathExp(const std::shared_ptr<Block>& parentBlock) {
+    std::vector<std::shared_ptr<Expression>> termExpressions;
+
+    auto term = parseMathTerm(parentBlock);
+    termExpressions.push_back(term);
+
     while (isTokenTypeAdditive()) {
         advance();
-        parseMathTerm();
+
+        term = parseMathTerm(parentBlock);
+        termExpressions.push_back(term);
     }
+
+    return std::make_shared<MathExpression>(termExpressions);
 }
 
-void Parser::parseMathTerm() {
-    parseMathFactor();
+std::shared_ptr<Expression> Parser::parseMathTerm(const std::shared_ptr<Block>& parentBlock) {
+    std::vector<std::shared_ptr<Expression>> factorExpressions;
+
+    auto factor = parseMathFactor(parentBlock);
+    factorExpressions.push_back(factor);
+
     while (isTokenTypeMultiplicative()) {
         advance();
-        parseMathFactor();
+
+        factor = parseMathFactor(parentBlock);
+        factorExpressions.push_back(factor);
     }
+
+    return std::make_shared<MathTermExpression>(factorExpressions);
 }
 
-void Parser::parseMathFactor() {
+std::shared_ptr<Expression> Parser::parseMathFactor(const std::shared_ptr<Block>& parentBlock) {
+    std::shared_ptr<Expression> expr;
+    bool minus = false;
+
     if (verifyTokenType(TokenType::RoundBracketOpen)) {
-        acceptToken(TokenType::RoundBracketOpen);
-        parseLogicExpr();
+        advance();
+
+        expr = parseLogicExpr(parentBlock);
         acceptToken(TokenType::RoundBracketClose);
     } else if (verifyTokenType(TokenType::Minus)) {
-        acceptToken(TokenType::Minus);
-        parseMathFactor();
+        advance();
+
+        auto factor = parseMathFactor(parentBlock);
+        expr = std::make_shared<MathFactorExpression>(factor, true);
     } else if (verifyTokenType(TokenType::Int)) {
-        acceptToken(TokenType::Int);
+        std::string num = acceptToken(TokenType::Int).getValue();
+        int number = std::stoi(num);
+
+        expr = std::make_shared<MathFactorExpression>(std::vector<int>{number});
     } else if (verifyTokenType(TokenType::SquareBracketOpen)) {
-        parseVec();
+        std::vector<int> vec = parseVec();
+        expr = std::make_shared<MathFactorExpression>(vec, minus);
     } else if (verifyTokenType(TokenType::Id)) {
-        acceptToken(TokenType::Id);
-        if (verifyTokenType(TokenType::RoundBracketOpen))
-            parseFuncCallSuffix();
-        else {}
+        Token token = acceptToken(TokenType::Id);
+        std:: string id = token.getValue();
+
+        if (verifyTokenType(TokenType::RoundBracketOpen)) {
+            auto statement = parseFuncCallSuffix(parentBlock, token);
+            expr = std::make_shared<MathFactorExpression>(statement);
+        } else if (parentBlock->existsVariable(id)) {
+            expr = std::make_shared<MathFactorExpression>(id);
+        } else {
+            throwVariableNotExists(id);
+        }
     } else {
         throwBadToken({TokenType::RoundBracketOpen, TokenType::Minus, TokenType::Int, TokenType::SquareBracketOpen,
                        TokenType::Id});
     }
+
+    return expr;
 }
 
-void Parser::parseVec() {
+std::vector<int> Parser::parseVec() {
     acceptToken(TokenType::SquareBracketOpen);
 
-    acceptToken(TokenType::Int);
-    int dimensions = 1;
+    std::vector<int> vec;
+
+    std::string num = acceptToken(TokenType::Int).getValue();
+    int number = std::stoi(num);
+    vec.push_back(number);
+
     while(verifyTokenType(TokenType::Comma)) {
-        acceptToken(TokenType::Comma);
-        acceptToken(TokenType::Int);
-        dimensions++;
+        advance();
+
+        num = acceptToken(TokenType::Int).getValue();
+        number = std::stoi(num);
+        vec.push_back(number);
     }
 
-    if (dimensions == 1 || dimensions > 3)
+    if (vec.size() == 1 || vec.size() > 3)
         throwInvalidVec();
 
     acceptToken(TokenType::SquareBracketClose);
+
+    return vec;
 }
 
 void Parser::advance() {
@@ -305,6 +457,34 @@ bool Parser::isTokenTypeMultiplicative() {
     return mulOperators.find(type) != mulOperators.end();
 }
 
+bool Parser::paramsValid(const std::shared_ptr<Function>& func, const std::vector<std::shared_ptr<Expression>>& args) {
+    return func->getParametersNumber() != args.size();
+}
+
+void Parser::throwVariableNotExists(const std::string& varName) {
+    std::string msg = "cannot assign value to variable \"" + varName + "\" , because variable wasn't defined";
+    throw std::runtime_error(msg);
+}
+
+void Parser::throwVariableAlreadyExists(const std::string &varName) {
+    std::string msg = "cannot initialize variable, because variable \"" + varName + "\" already exists";
+    throw std::runtime_error(msg);
+}
+
+void Parser::throwFunctionInvalidParametersNumber(const std::shared_ptr<Function>& func, int actualParamsNum) {
+    std::string funcName = func->getID();
+    int expectedParamsNum = func->getParametersNumber();
+
+    std::string msg = "function \"" + funcName + "\" expects " + std::to_string(expectedParamsNum) + ", got " +
+            std::to_string(actualParamsNum);
+    throw std::runtime_error(msg);
+}
+
+void Parser::throwFunctionNotExist(const std::string& funcName) {
+    std::string msg = "function with name \"" + funcName + "\" doesn't exist";
+    throw std::runtime_error(msg);
+}
+
 void Parser::throwInvalidVec() {
     std::string msg = "invalid vector size, support only 2d and 3d vectors";
     throw std::runtime_error(msg);
@@ -319,4 +499,3 @@ void Parser::throwBadToken(const std::list<TokenType> &expectedTokens) {
 
     throw std::runtime_error(ss.str());
 }
-
