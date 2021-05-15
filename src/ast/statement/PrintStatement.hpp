@@ -20,6 +20,8 @@ namespace simpl {
             printTypes.push_back(PrintType::Expression);
             exprArgs.push_back(arg);
         }
+
+        Return execute() override{return Return();}
     private:
         std::vector<PrintType> printTypes;
         std::vector<std::string> stringArgs;

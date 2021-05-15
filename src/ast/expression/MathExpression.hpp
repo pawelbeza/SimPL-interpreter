@@ -1,12 +1,18 @@
 #pragma once
 
 #include "MathTermExpression.hpp"
+#include "TokenType.h"
 
 namespace simpl {
     class MathExpression : public Expression {
     public:
-        explicit MathExpression(std::vector<std::shared_ptr<Expression>> expressions_) : expressions(expressions_){}
+        MathExpression() = delete;
+
+        explicit MathExpression(std::vector<std::shared_ptr<Expression>> expressions_, std::vector<TokenType> operatorTypes);
+
+        Variable calculate() const override;
     private:
         std::vector<std::shared_ptr<Expression>> expressions;
+        std::vector<TokenType> operatorTypes;
     };
 }

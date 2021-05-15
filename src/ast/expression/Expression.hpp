@@ -4,6 +4,6 @@ namespace simpl {
     class Expression {
     public:
         virtual ~Expression() = default;
-//        virtual Variable calculate() const = 0;
+        virtual Variable calculate() const = 0;
     };
 }

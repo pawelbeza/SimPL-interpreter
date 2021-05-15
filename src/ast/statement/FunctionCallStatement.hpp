@@ -7,6 +7,9 @@ namespace simpl {
     public:
         FunctionCallStatement(std::shared_ptr<Function> func_, std::vector<std::shared_ptr<Expression>> args_) :
         func(func_), args(args_) {}
+
+        Return execute() override{return Return();}
+
     private:
         std::shared_ptr<Function> func;
         std::vector<std::shared_ptr<Expression>> args;

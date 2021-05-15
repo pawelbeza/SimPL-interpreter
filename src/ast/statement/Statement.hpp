@@ -1,9 +1,11 @@
 #pragma once
 
+#include "Return.hpp"
+
 namespace simpl {
     class Statement {
     public:
         virtual ~Statement() = default;
-//        virtual void execute() = 0;
+        virtual Return execute() = 0;
     };
 }
