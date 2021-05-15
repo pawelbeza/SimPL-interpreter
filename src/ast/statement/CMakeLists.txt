@@ -1,6 +1,3 @@
-add_subdirectory("expression")
-add_subdirectory("statement")
-
 set(HEADER
         ${HEADER}
         ${CMAKE_CURRENT_SOURCE_DIR}
@@ -9,7 +6,6 @@ set(HEADER
 
 set(SOURCE
         ${SOURCE}
-        ${CMAKE_CURRENT_SOURCE_DIR}/Variable.cpp
         PARENT_SCOPE
         )
 
