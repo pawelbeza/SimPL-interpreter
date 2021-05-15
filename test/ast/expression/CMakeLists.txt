@@ -1,0 +1,11 @@
+set(SOURCE
+        ${SOURCE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/MathFactorTest.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/MathTermTest.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/MathTest.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/LogicFactorTest.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/LogicRelationalTermTest.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/LogicAndTest.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/LogicTest.cpp
+        PARENT_SCOPE
+        )

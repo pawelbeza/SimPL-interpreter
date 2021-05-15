@@ -2,10 +2,9 @@ project(simpl_lib_test)
 
 find_package(GTest REQUIRED)
 
-set(SOURCE
-        LexerTests.cpp
-        ParserTests.cpp
-        )
+add_subdirectory(ast)
+add_subdirectory(lexer)
+add_subdirectory(parser)
 
 add_executable(${PROJECT_NAME} ${SOURCE})
 target_include_directories(${PROJECT_NAME} PUBLIC ${GTEST_INCLUDE_DIRS})
