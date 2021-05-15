@@ -44,7 +44,7 @@ namespace simpl {
         std::shared_ptr<Expression> parseMathTerm(const std::shared_ptr<Block>& parentBlock);
         std::shared_ptr<Expression> parseMathFactor(const std::shared_ptr<Block>& parentBlock);
 
-        void advance();
+        Token advance();
         std::vector<int> parseVec();
         Token acceptToken(TokenType expected);
         bool verifyTokenType(TokenType expected);

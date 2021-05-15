@@ -294,18 +294,20 @@ std::shared_ptr<AndExpression> Parser::parseLogicAndTerm(const std::shared_ptr<B
 
 std::shared_ptr<RelationalExpression> Parser::parseLogicRelTerm(const std::shared_ptr<Block>& parentBlock) {
     std::vector<std::shared_ptr<Expression>> factorExpressions;
+    std::vector<TokenType> relOps;
 
     auto factor = parseLogicFactor(parentBlock);
     factorExpressions.push_back(factor);
 
     while (isTokenTypeRelational()) {
-        advance();
+        TokenType type = advance().getType();
+        relOps.push_back(type);
 
         factor = parseLogicFactor(parentBlock);
         factorExpressions.push_back(factor);
     }
 
-    return std::make_shared<RelationalExpression>(factorExpressions);
+    return std::make_shared<RelationalExpression>(factorExpressions, relOps);
 }
 
 std::shared_ptr<Expression> Parser::parseLogicFactor(const std::shared_ptr<Block>& parentBlock) {
@@ -322,34 +324,38 @@ std::shared_ptr<Expression> Parser::parseLogicFactor(const std::shared_ptr<Block
 
 std::shared_ptr<Expression> Parser::parseMathExp(const std::shared_ptr<Block>& parentBlock) {
     std::vector<std::shared_ptr<Expression>> termExpressions;
+    std::vector<TokenType> additiveOps;
 
     auto term = parseMathTerm(parentBlock);
     termExpressions.push_back(term);
 
     while (isTokenTypeAdditive()) {
-        advance();
+        TokenType type = advance().getType();
+        additiveOps.push_back(type);
 
         term = parseMathTerm(parentBlock);
         termExpressions.push_back(term);
     }
 
-    return std::make_shared<MathExpression>(termExpressions);
+    return std::make_shared<MathExpression>(termExpressions, additiveOps);
 }
 
 std::shared_ptr<Expression> Parser::parseMathTerm(const std::shared_ptr<Block>& parentBlock) {
     std::vector<std::shared_ptr<Expression>> factorExpressions;
+    std::vector<TokenType> multiplicativeOps;
 
     auto factor = parseMathFactor(parentBlock);
     factorExpressions.push_back(factor);
 
     while (isTokenTypeMultiplicative()) {
-        advance();
+        TokenType type = advance().getType();
+        multiplicativeOps.push_back(type);
 
         factor = parseMathFactor(parentBlock);
         factorExpressions.push_back(factor);
     }
 
-    return std::make_shared<MathTermExpression>(factorExpressions);
+    return std::make_shared<MathTermExpression>(factorExpressions, multiplicativeOps);
 }
 
 std::shared_ptr<Expression> Parser::parseMathFactor(const std::shared_ptr<Block>& parentBlock) {
@@ -359,7 +365,9 @@ std::shared_ptr<Expression> Parser::parseMathFactor(const std::shared_ptr<Block>
     if (verifyTokenType(TokenType::RoundBracketOpen)) {
         advance();
 
-        expr = parseLogicExpr(parentBlock);
+        auto nextExpr = parseLogicExpr(parentBlock);
+        expr = std::make_shared<MathFactorExpression>(nextExpr);
+
         acceptToken(TokenType::RoundBracketClose);
     } else if (verifyTokenType(TokenType::Minus)) {
         advance();
@@ -370,19 +378,25 @@ std::shared_ptr<Expression> Parser::parseMathFactor(const std::shared_ptr<Block>
         std::string num = acceptToken(TokenType::Int).getValue();
         int number = std::stoi(num);
 
-        expr = std::make_shared<MathFactorExpression>(std::vector<int>{number});
+        auto var = std::make_shared<Variable>(std::vector<int>{number});
+        expr = std::make_shared<MathFactorExpression>(var);
     } else if (verifyTokenType(TokenType::SquareBracketOpen)) {
         std::vector<int> vec = parseVec();
-        expr = std::make_shared<MathFactorExpression>(vec, minus);
+
+        auto var = std::make_shared<Variable>(vec);
+        expr = std::make_shared<MathFactorExpression>(var);
     } else if (verifyTokenType(TokenType::Id)) {
         Token token = acceptToken(TokenType::Id);
         std:: string id = token.getValue();
 
         if (verifyTokenType(TokenType::RoundBracketOpen)) {
-            auto statement = parseFuncCallSuffix(parentBlock, token);
-            expr = std::make_shared<MathFactorExpression>(statement);
+            auto funcCall = parseFuncCallSuffix(parentBlock, token);
+            expr = std::make_shared<MathFactorExpression>(funcCall);
         } else if (parentBlock->existsVariable(id)) {
-            expr = std::make_shared<MathFactorExpression>(id);
+            Variable var = parentBlock->getVariable(id);
+
+            auto mathVar = std::make_shared<Variable>(var);
+            expr = std::make_shared<MathFactorExpression>(mathVar);
         } else {
             throwVariableNotExists(id);
         }
@@ -419,8 +433,11 @@ std::vector<int> Parser::parseVec() {
     return vec;
 }
 
-void Parser::advance() {
+Token Parser::advance() {
+    Token token = lexer.getToken();
     lexer.readNextToken();
+
+    return token;
 }
 
 Token Parser::acceptToken(TokenType expected) {
