@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Variable.hpp"
+
 namespace simpl {
     class Expression {
     public:

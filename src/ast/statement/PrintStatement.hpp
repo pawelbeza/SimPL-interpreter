@@ -1,6 +1,10 @@
 #pragma once
 
 #include "Expression.hpp"
+#include "Statement.hpp"
+
+#include <memory>
+#include <iostream>
 
 namespace simpl {
     class PrintStatement : public Statement {
@@ -10,21 +14,16 @@ namespace simpl {
         };
 
     public:
-        void addPrintArg(std::string arg) {
-            printTypes.push_back(PrintType::String);
-            stringArgs.push_back(arg);
-             std::shared_ptr<Expression> exp;
-        }
+        explicit PrintStatement(std::ostream &ostream_ = std::cout);
 
-        void addPrintArg(std::shared_ptr<Expression> arg) {
-            printTypes.push_back(PrintType::Expression);
-            exprArgs.push_back(arg);
-        }
+        void addPrintArg(const std::string& arg);
+        void addPrintArg(const std::shared_ptr<Expression>& arg);
 
-        Return execute() override{return Return();}
+        Return execute() override;
     private:
         std::vector<PrintType> printTypes;
         std::vector<std::string> stringArgs;
         std::vector<std::shared_ptr<Expression>> exprArgs;
+        std::ostream &os;
     };
 }

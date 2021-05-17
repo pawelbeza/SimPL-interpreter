@@ -8,7 +8,7 @@ namespace simpl {
     public:
         Variable() = default;
         explicit Variable(const std::vector<int>& numbers_);
-        Variable& operator=(const Variable& rhs);
+        Variable& operator=(Variable rhs);
 
         int& operator[](int index);
         std::vector<int>& operator*();

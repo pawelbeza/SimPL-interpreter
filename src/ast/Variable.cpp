@@ -6,7 +6,7 @@ Variable::Variable(const std::vector<int> &numbers_) {
     numbers = numbers_;
 }
 
-Variable &Variable::operator=(const Variable &rhs) {
+Variable &Variable::operator=(Variable rhs) {
     if (this == &rhs)
         return *this;
 

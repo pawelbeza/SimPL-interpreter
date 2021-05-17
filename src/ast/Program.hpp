@@ -10,17 +10,14 @@ namespace simpl {
     public:
         Program() = default;
 
-        void addFunction(std::shared_ptr<Function> &func) {
-            std::string funcID = func->getID();
-            functions.insert({funcID, func});
-        };
+        void addFunction(std::shared_ptr<Function> &func);
+        bool functionExists(const std::string& funcName) const;
+        std::shared_ptr<Function> getFunction(std::string& funcName);
 
-        bool functionExists(const std::string& funcName) const {
-            return functions.find(funcName) != functions.end();
-        }
-
-        std::shared_ptr<Function> getFunction(std::string& funcName) {
-            return functions.at(funcName);
+        Return execute() {
+            if (functions.find("main") == functions.end())
+                throw std::runtime_error("couldn't find main function");
+            return functions.at("main")->execute();
         }
     private:
         std::unordered_map<std::string, std::shared_ptr<Function>> functions;

@@ -10,6 +10,8 @@ set(HEADER
 set(SOURCE
         ${SOURCE}
         ${CMAKE_CURRENT_SOURCE_DIR}/Variable.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/Program.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/Function.cpp
         PARENT_SCOPE
         )
 
