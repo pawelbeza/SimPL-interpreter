@@ -1,0 +1,20 @@
+func add_vec(a, b) {
+    return a + b;
+}
+
+func main() {
+    print("Vector ops:\n\n");
+
+    a := [1,2,3];
+    b := [3,2,1];
+    vec_sum := add_vec(a, b);
+    print("adding vectors: ", a, "+", b, "=", vec_sum, "\n");
+
+    print("vector product of vectors: ", a, "*", b, "=", a * b, "\n");
+    print("scalar product of vectors: ", a, "x", b, "=", a x b, "\n");
+
+    print("vector difference: ", [1,2], "-", [2,1], "=", [1,2] - [2,1], "\n");
+    print("vector difference: ", [1,2], "/", [2,1], "=", [1,2] / [2,1], "\n");
+
+    print("vector ops mix: ", [1,2], "*", [2,1], "+", [1,1,1], "*", [1,1,1], "=", [1,2] * [2,1] + [1,1,1] * [1,1,1], "\n");
+}

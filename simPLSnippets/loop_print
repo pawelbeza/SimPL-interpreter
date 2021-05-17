@@ -1,0 +1,25 @@
+func print_tree(base_tree) {
+    print("While loop tree\n");
+    i := 0;
+    while (i < base_tree) {
+        j := 0;
+        while (j < base_tree - i - 1) {
+            print(" ");
+            j = j + 1;
+        }
+
+        j = 0;
+        while (j < 2 * i + 1) {
+            print("*");
+            j = j + 1;
+        }
+
+        i = i + 1;
+
+        print("\n");
+    }
+}
+
+func main() {
+    print_tree(6);
+}
