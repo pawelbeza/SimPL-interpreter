@@ -5,6 +5,7 @@ find_package(GTest REQUIRED)
 add_subdirectory(ast)
 add_subdirectory(lexer)
 add_subdirectory(parser)
+add_subdirectory(execution)
 
 add_executable(${PROJECT_NAME} ${SOURCE})
 target_include_directories(${PROJECT_NAME} PUBLIC ${GTEST_INCLUDE_DIRS})

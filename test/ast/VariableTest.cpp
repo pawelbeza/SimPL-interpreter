@@ -131,3 +131,10 @@ TEST(ast_variable, variable_3d) {
     ASSERT_EQ(var1.toString(), "[4, 2, 3]");
     ASSERT_EQ(var2.size(), 3);
 }
+
+TEST(ast_variable, bool_variable) {
+    ASSERT_FALSE(Variable({0}));
+    ASSERT_TRUE(Variable({1}));
+    ASSERT_FALSE(Variable({1}) && Variable({0}));
+    ASSERT_TRUE(Variable({1}) || Variable({0}));
+}

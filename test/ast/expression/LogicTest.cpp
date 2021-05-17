@@ -4,6 +4,22 @@
 
 using namespace simpl;
 
+TEST(logic_expression, plain_bool_calculate) {
+    auto var1 = std::make_shared<Variable>(std::vector<int>{0});
+    auto factorExp1 = std::make_shared<MathFactorExpression>(var1);
+    std::vector<std::shared_ptr<Expression>> exps1({factorExp1});
+
+    LogicExpression logicExp1(exps1);
+    ASSERT_FALSE(logicExp1.calculate());
+
+    auto var2 = std::make_shared<Variable>(std::vector<int>{1});
+    auto factorExp2 = std::make_shared<MathFactorExpression>(var2);
+    std::vector<std::shared_ptr<Expression>> exps2({factorExp2});
+
+    LogicExpression logicExp2(exps2);
+    ASSERT_TRUE(logicExp2.calculate());
+}
+
 TEST(logic_expression, calculate) {
     auto var1 = std::make_shared<Variable>(std::vector<int>{1,2,3});
     auto factorExp1 = std::make_shared<MathFactorExpression>(var1);

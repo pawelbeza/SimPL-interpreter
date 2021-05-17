@@ -1,0 +1,9 @@
+set(SOURCE
+        ${SOURCE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/PrintStatementTest.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/VariableAssignmentTest.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/ReturnStatement.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/IfStatement.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/WhileStatement.cpp
+        PARENT_SCOPE
+        )

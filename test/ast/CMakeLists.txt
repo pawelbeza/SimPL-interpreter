@@ -1,4 +1,5 @@
 add_subdirectory(expression)
+add_subdirectory(statement)
 
 set(SOURCE
         ${SOURCE}

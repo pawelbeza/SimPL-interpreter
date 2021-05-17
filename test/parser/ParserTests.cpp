@@ -346,9 +346,14 @@ INSTANTIATE_TEST_CASE_P(FunctionCallTest, ParserTest, ::testing::Values(
 INSTANTIATE_TEST_CASE_P(BlockTest, ParserTest, ::testing::Values(
         ParserTestParams{"func f() {} {}", true},
         ParserTestParams{"func f() { {}", true},
+        ParserTestParams{"func f() { {i : = 1} i = i + 1;}", true},
+        ParserTestParams{"func f() { {i : = 1} {i = i + 1;}}", true},
         ParserTestParams{"func f() {{}}", false},
         ParserTestParams{"func f() {{} {}}", false},
         ParserTestParams{"func f() {{{{}} {}}}", false},
+        ParserTestParams{"func f(a) { {a = 1;} }", false},
+        ParserTestParams{"func f() { i := 0; {i = 1;}}", false},
+        ParserTestParams{"func f() { i := 0; {i = 2; {i = 1;}}}", false},
         ParserTestParams{"func slow_pow(base, exp) {"
                          "result := 1;"
                          "while (exp > 0) {"
