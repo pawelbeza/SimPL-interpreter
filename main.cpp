@@ -2,8 +2,8 @@
 #include <fstream>
 
 #include "Lexer.h"
-#include "Token.h"
-#include "TokenTypeFactory.h"
+#include "Return.hpp"
+#include "Parser.hpp"
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -20,18 +20,13 @@ int main(int argc, char *argv[]) {
     }
 
     simpl::Lexer lexer(file);
-    std::cout << file.eof();
-    std::cout << "Found following tokens in file:" << std::endl;
     try {
-        lexer.readNextToken();
-        while(lexer.getToken().getType() != simpl::TokenType::Eof) {
-            simpl::Token token = lexer.getToken();
-            std::string tokenTypeName = simpl::TokenTypeFactory::getTokenTypeName(token.getType());
+        simpl::Parser parser(lexer);
+        auto program = parser.parse();
 
-            std::cout << "type: " << tokenTypeName << " value: " << token.getValue() << std::endl;
-
-            lexer.readNextToken();
-        }
+        simpl::Return ret = program->execute();
+        if (ret.type == simpl::Return::Type::Variable)
+            std::cout << ret.var;
     } catch(std::exception &e) {
         std::cout << e.what() << std::endl;
     }
