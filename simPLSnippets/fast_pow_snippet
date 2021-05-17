@@ -1,0 +1,15 @@
+func fast_pow(base, exp) {
+    if (exp == 0) {
+        return 1;
+    }
+
+    half_pow := fast_pow(base, exp / 2);
+    if (exp % 2 == 0) {
+        return half_pow * half_pow;
+    }
+    return half_pow * half_pow * base;
+}
+
+func main() {
+    fast_pow(2, 10);
+}

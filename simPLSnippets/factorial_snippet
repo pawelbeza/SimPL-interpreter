@@ -1,0 +1,10 @@
+func ugly_factorial(n) {
+    if (n <= 1) {
+        return 1;
+    }
+    return ugly_factorial(n - 1) * n;
+}
+
+func main() {
+    ugly_factorial(5);
+}
