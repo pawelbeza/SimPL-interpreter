@@ -24,7 +24,7 @@ void Lexer::readNextToken() {
 }
 
 void Lexer::ignoreWhitespaces() {
-    while(in && std::isspace(in.peek()))
+    while (in && std::isspace(in.peek()))
         in.get();
 }
 
@@ -42,7 +42,7 @@ bool Lexer::tryIdOrKeyword() {
     }
 
     std::string buf;
-    while(std::isalnum(in.peek()) || in.peek() == '_')
+    while (std::isalnum(in.peek()) || in.peek() == '_')
         buf += static_cast<char>(in.get());
 
     TokenType type = (TokenTypeFactory::isTokenValid(buf)) ? TokenTypeFactory::createTokenType(buf) : TokenType::Id;
@@ -57,7 +57,7 @@ bool Lexer::tryNumber() {
     }
 
     std::string buf;
-    while(std::isdigit(in.peek()))
+    while (std::isdigit(in.peek()))
         buf += static_cast<char>(in.get());
 
     token = Token(TokenType::Int, buf);
@@ -71,8 +71,22 @@ bool Lexer::tryString() {
     in.get();
 
     std::string buf;
-    while((std::isprint(in.peek()) || std::isspace(in.peek())) && in.peek() != '"')
-        buf += static_cast<char>(in.get());
+    while ((std::isprint(in.peek()) || std::isspace(in.peek())) && in.peek() != '"') {
+        if (in.peek() == '\\') {
+            in.get();
+            if (in.peek() == '"') {
+                buf += static_cast<char>(in.get());
+            } else if (in.peek() == 'n') {
+                buf += '\n';
+                in.get();
+            } else {
+                buf += '\\';
+                in.get();
+            }
+        } else {
+            buf += static_cast<char>(in.get());
+        }
+    }
 
     if (in.peek() != '"') {
         return false;

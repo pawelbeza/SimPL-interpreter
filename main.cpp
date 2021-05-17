@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
         if (ret.type == simpl::Return::Type::Variable)
             std::cout << ret.var;
     } catch(std::exception &e) {
-        std::cout << e.what() << std::endl;
+        std::cout << std::endl << "Exception thrown: " << e.what() << std::endl;
     }
 
     file.close();
