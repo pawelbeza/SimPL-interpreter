@@ -24,9 +24,10 @@ using namespace simpl;
 
 Parser::Parser(Lexer &lexer_) : lexer(lexer_) {}
 
-void Parser::parse() {
+std::shared_ptr<Program> Parser::parse() {
     advance();
     parseProgram();
+    return program;
 }
 
 void Parser::parseProgram() {
@@ -93,6 +94,7 @@ void Parser::parseBlock(const std::shared_ptr<Block>& parentBlock) {
         } else if (verifyTokenType(TokenType::CurlyBracketOpen)) {
             auto childBlock = std::make_shared<Block>(parentBlock);
             parseBlock(childBlock);
+            statement = childBlock;
         } else {
             throwBadToken({TokenType::Id, TokenType::While, TokenType::If, TokenType::Return, TokenType::Print,
                            TokenType::CurlyBracketClose});
@@ -148,7 +150,8 @@ std::shared_ptr<Statement> Parser::parseVariableDefinitionSuffix(const std::shar
     acceptToken(TokenType::Definition);
     auto expr = parseLogicExpr(parentBlock);
 
-    return std::make_shared<VariableAssignment>(varName, expr);
+    auto var = parentBlock->getVariable(varName);
+    return std::make_shared<VariableAssignment>(var, expr);
 }
 
 std::shared_ptr<Statement> Parser::parseVariableAssignmentSuffix(const std::shared_ptr<Block>& parentBlock, const Token& token) {
@@ -159,7 +162,8 @@ std::shared_ptr<Statement> Parser::parseVariableAssignmentSuffix(const std::shar
     acceptToken(TokenType::Assignment);
     auto expr = parseLogicExpr(parentBlock);
 
-    return std::make_shared<VariableAssignment>(varName, expr);
+    auto var = parentBlock->getVariable(varName);
+    return std::make_shared<VariableAssignment>(var, expr);
 }
 
 std::shared_ptr<Statement> Parser::parseWhile(const std::shared_ptr<Block>& parentBlock) {
@@ -260,9 +264,6 @@ std::vector<std::shared_ptr<Expression>> Parser::parseFuncArgs(const std::shared
 std::shared_ptr<Expression> Parser::parseLogicExpr(const std::shared_ptr<Block>& parentBlock) {
     std::vector<std::shared_ptr<Expression>> andExpressions;
 
-    std::shared_ptr<AndExpression> expression;
-    andExpressions.push_back(expression);
-
     auto term = parseLogicAndTerm(parentBlock);
     andExpressions.push_back(term);
 
@@ -360,8 +361,6 @@ std::shared_ptr<Expression> Parser::parseMathTerm(const std::shared_ptr<Block>& 
 
 std::shared_ptr<Expression> Parser::parseMathFactor(const std::shared_ptr<Block>& parentBlock) {
     std::shared_ptr<Expression> expr;
-    bool minus = false;
-
     if (verifyTokenType(TokenType::RoundBracketOpen)) {
         advance();
 
@@ -393,10 +392,8 @@ std::shared_ptr<Expression> Parser::parseMathFactor(const std::shared_ptr<Block>
             auto funcCall = parseFuncCallSuffix(parentBlock, token);
             expr = std::make_shared<MathFactorExpression>(funcCall);
         } else if (parentBlock->existsVariable(id)) {
-            Variable var = parentBlock->getVariable(id);
-
-            auto mathVar = std::make_shared<Variable>(var);
-            expr = std::make_shared<MathFactorExpression>(mathVar);
+            auto var = parentBlock->getVariable(id);
+            expr = std::make_shared<MathFactorExpression>(var);
         } else {
             throwVariableNotExists(id);
         }

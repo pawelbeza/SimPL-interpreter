@@ -18,7 +18,7 @@ namespace simpl {
     class Parser {
     public:
         explicit Parser(Lexer &lexer);
-        void parse();
+        std::shared_ptr<Program> parse();
     private:
         void parseProgram();
         void parseFunc();
